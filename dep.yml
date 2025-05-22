@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: boardgame-container
-        image: 047719649994.dkr.ecr.ap-south-1.amazonaws.com/apps/boardgame:${BUILD_NUMBER}  # Replace with your app image
+        image: 047719649994.dkr.ecr.ap-south-1.amazonaws.com/boardgame:${BUILD_NUMBER}  # Replace with your app image
         ports:
         - containerPort: 8080
 
