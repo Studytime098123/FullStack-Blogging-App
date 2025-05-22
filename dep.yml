@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'this is my eks project'
+            }
+        }
+
+        stage('git clone') {
+            steps {
+                echo 'clonning git url'
+                git branch: 'main', url: 'https://github.com/Studytime098123/FullStack-Blogging-App.git'
+            }
+        }
+
+        stage('Hmaven build') {
+            steps {
+                echo 'maven package'
+                sh "mvn package"
+            }
+        }
+
+        stage('docker build') {
+            steps {
+                echo 'building docker image'
+
+                sh "docker build -t boardgame:$BUILD_NUMBER ."
+            }
+        }
+
+        stage('docker tag') {
+            steps {
+                echo 'docker tagging'
+                sh "docker tag boardgame:$BUILD_NUMBER 047719649994.dkr.ecr.ap-south-1.amazonaws.com/apps/boardgame:$BUILD_NUMBER"
+                sh "docker push 047719649994.dkr.ecr.ap-south-1.amazonaws.com/apps/boardgame:$BUILD_NUMBER"
+            }
+        }
+
+        stage('kubectl') {
+            steps {
+                echo 'runnning kubesrnettes'
+
+                sh """
+                kubectl apply -f dep.yaml
+                """
+            }
+        }
+
+        stage('Hello1') {
+            steps {
+                echo 'Hello World'
+            }
+        }
+
+
+    }
+}
