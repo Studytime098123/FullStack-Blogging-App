@@ -59,7 +59,7 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 echo 'Applying Kubernetes manifest...'
-                sh 'kubectl apply -f dep.yaml'
+                sh 'kubectl apply -f dep.yml'
             }
         }
 
