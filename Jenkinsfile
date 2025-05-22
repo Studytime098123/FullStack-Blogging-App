@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -6,12 +5,13 @@ pipeline {
         ECR_REGISTRY = '047719649994.dkr.ecr.ap-south-1.amazonaws.com'
         ECR_REPO     = 'apps/boardgame'
         IMAGE_TAG    = "${BUILD_NUMBER}"
+        FULL_IMAGE   = "${ECR_REGISTRY}/${ECR_REPO}:${BUILD_NUMBER}"
     }
 
     stages {
         stage('Init') {
             steps {
-                echo 'Starting EKS Deployment Pipeline '
+                echo 'Starting EKS Deployment Pipeline'
             }
         }
 
@@ -24,7 +24,7 @@ pipeline {
 
         stage('Maven Build') {
             steps {
-                echo 'Building project with Maven...'
+                echo '🛠Building project with Maven...'
                 sh 'mvn clean package -DskipTests'
             }
         }
@@ -50,16 +50,25 @@ pipeline {
             steps {
                 echo 'Tagging and pushing Docker image to ECR...'
                 sh '''
-                docker tag boardgame:$IMAGE_TAG ${ECR_REGISTRY}/${ECR_REPO}:$IMAGE_TAG
-                docker push ${ECR_REGISTRY}/${ECR_REPO}:$IMAGE_TAG
+                docker tag boardgame:$IMAGE_TAG ${FULL_IMAGE}
+                docker push ${FULL_IMAGE}
                 '''
             }
         }
 
-        stage('Deploy to EKS') {
+        stage('Apply Kubernetes Manifest') {
             steps {
-                echo 'Applying Kubernetes manifest...'
-                sh 'kubectl apply -f dep.yml'
+                echo 'Applying base Kubernetes manifest (first-time setup only)...'
+                sh 'kubectl apply -f dep.yaml || true'
+            }
+        }
+
+        stage('Update Image in Deployment') {
+            steps {
+                echo 'Updating image in Kubernetes Deployment...'
+                sh '''
+                kubectl set image deployment/boardgame boardgame-container=${FULL_IMAGE}
+                '''
             }
         }
 
