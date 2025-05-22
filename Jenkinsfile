@@ -59,7 +59,8 @@ pipeline {
         stage('Apply Kubernetes Manifest') {
             steps {
                 echo 'Applying base Kubernetes manifest (first-time setup only)...'
-                sh 'kubectl apply -f dep.yaml || true'
+ //               sh 'kubectl apply -f dep.yaml || true'
+                sh 'kubectl apply -f dep.yaml'
             }
         }
 
