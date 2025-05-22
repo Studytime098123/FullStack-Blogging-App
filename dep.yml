@@ -1,59 +1,71 @@
 pipeline {
     agent any
 
+    environment {
+        ECR_REGISTRY = '047719649994.dkr.ecr.ap-south-1.amazonaws.com'
+        ECR_REPO     = 'apps/boardgame'
+        IMAGE_TAG    = "${BUILD_NUMBER}"
+    }
+
     stages {
-        stage('Hello') {
+        stage('Init') {
             steps {
-                echo 'this is my eks project'
+                echo 'Starting EKS Deployment Pipeline '
             }
         }
 
-        stage('git clone') {
+        stage('Clone Git Repo') {
             steps {
-                echo 'clonning git url'
+                echo 'Cloning GitHub repo...'
                 git branch: 'main', url: 'https://github.com/Studytime098123/FullStack-Blogging-App.git'
             }
         }
 
-        stage('Hmaven build') {
+        stage('Maven Build') {
             steps {
-                echo 'maven package'
-                sh "mvn package"
+                echo 'Building project with Maven...'
+                sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('docker build') {
+        stage('Docker Build') {
             steps {
-                echo 'building docker image'
-
-                sh "docker build -t boardgame:$BUILD_NUMBER ."
+                echo 'Building Docker image...'
+                sh 'docker build -t boardgame:$IMAGE_TAG .'
             }
         }
 
-        stage('docker tag') {
+        stage('Login to ECR') {
             steps {
-                echo 'docker tagging'
-                sh "docker tag boardgame:$BUILD_NUMBER 047719649994.dkr.ecr.ap-south-1.amazonaws.com/apps/boardgame:$BUILD_NUMBER"
-                sh "docker push 047719649994.dkr.ecr.ap-south-1.amazonaws.com/apps/boardgame:$BUILD_NUMBER"
+                echo 'Logging into Amazon ECR...'
+                sh '''
+                aws ecr get-login-password --region ap-south-1 | \
+                docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                '''
             }
         }
 
-        stage('kubectl') {
+        stage('Tag & Push to ECR') {
             steps {
-                echo 'runnning kubesrnettes'
-
-                sh """
-                kubectl apply -f dep.yaml
-                """
+                echo 'Tagging and pushing Docker image to ECR...'
+                sh '''
+                docker tag boardgame:$IMAGE_TAG ${ECR_REGISTRY}/${ECR_REPO}:$IMAGE_TAG
+                docker push ${ECR_REGISTRY}/${ECR_REPO}:$IMAGE_TAG
+                '''
             }
         }
 
-        stage('Hello1') {
+        stage('Deploy to EKS') {
             steps {
-                echo 'Hello World'
+                echo 'Applying Kubernetes manifest...'
+                sh 'kubectl apply -f dep.yaml'
             }
         }
 
-
+        stage('Done') {
+            steps {
+                echo 'Deployment complete!'
+            }
+        }
     }
 }
