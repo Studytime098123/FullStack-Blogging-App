@@ -22,14 +22,6 @@ jobs:
       - name: Build with Maven
         run: mvn -B package --file pom.xml
 
-  docker:
-    name: Docker Build and Run
-    runs-on: self-hosted
-    needs: build  # This ensures the docker stage runs after build
-
-    steps:
-      - uses: actions/checkout@v4
-
       - name: Docker Version
         run: docker --version
 
@@ -38,3 +30,5 @@ jobs:
 
       - name: Run Docker Container
         run: docker run -d -p 8080:8080 sample:v1
+
+  
