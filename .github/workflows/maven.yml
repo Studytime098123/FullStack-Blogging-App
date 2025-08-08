@@ -23,10 +23,9 @@ jobs:
         run: mvn -B package --file pom.xml
 
       - name: Docker Version
-        run: docker --version
+        run: |
+          docker --version
+          docker build -t sample:v1 .
+          docker run -d -p 8080:8080 sample:v1
 
-      - name: Docker Build Image
-        run: docker build -t sample:v1 .
-
-      - name: Run Docker Container
-        run: docker run -d -p 8080:8080 sample:v1
+    
