@@ -1,6 +1,6 @@
 FROM eclipse-temurin:17-jdk-alpine
     
-EXPOSE 8081
+EXPOSE 8080
 
 
 COPY target/*.jar app.jar
