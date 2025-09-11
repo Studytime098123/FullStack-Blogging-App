@@ -1,0 +1,85 @@
+What is envsubst?
+
+envsubst is a small command-line utility that comes with GNU gettext.
+
+Its job: replace environment variables in a text file with their actual values.
+
+Syntax style: ${VAR} or $VAR.
+
+Commonly used in DevOps to “template” YAML/JSON configs (like Kubernetes manifests).
+
+🔹 Example
+
+Suppose you have a file deployment.yaml:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boardgame
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: boardgame-container
+        image: 047719649994.dkr.ecr.ap-south-1.amazonaws.com/apps/boardgame:${BUILD_ID}
+
+
+And your shell environment has:
+
+export BUILD_ID=42
+
+
+Run:
+
+envsubst < deployment.yaml
+
+
+Output:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: boardgame
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: boardgame-container
+        image: 047719649994.dkr.ecr.ap-south-1.amazonaws.com/apps/boardgame:42
+
+
+👉 It replaced ${BUILD_ID} with the actual value.
+
+🔹 How to use with Kubernetes
+
+In Jenkins pipeline:
+
+stage('Deploy') {
+  steps {
+    sh '''
+      export BUILD_ID=${BUILD_NUMBER}
+      envsubst < dep.yml | kubectl apply -f -
+    '''
+  }
+}
+
+
+envsubst substitutes ${BUILD_ID} in dep.yml
+
+The final YAML (with the real tag) is piped straight to kubectl apply
+
+🔹 Why use envsubst?
+
+Kubernetes doesn’t understand variables inside YAML.
+
+envsubst lets you keep templates with placeholders.
+
+It’s simple (no need for Helm/Kustomize if your needs are small).
+
+✅ Summary:
+envsubst = environment variable substitution tool.
+It takes a template file → replaces $VARS → outputs a ready file.
+
+👉 Do you want me to show you how to install envsubst on Ubuntu/Jenkins agent so it works in your pipeline?
