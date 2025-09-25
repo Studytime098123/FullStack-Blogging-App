@@ -1,0 +1,128 @@
+Skip to content
+Chat history
+
+You said:
+pipeline {
+    agent any
+    
+    tools {
+        maven 'maven3'
+        
+    }
+     environment {
+        SONAR_HOME = tool 'sonar-scanner'
+     }
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello World'
+            }
+        }
+        
+        stage('checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Studytime098123/FullStack-Blogging-App.git'
+            }
+        }
+        
+        stage('maven') {
+            steps {
+                sh "mvn package"
+            }
+        }
+        
+        
+        stage('Sonar Scanner') {
+            steps {
+                echo 'Running SonarQube analysis...'
+                withSonarQubeEnv('sonarqube') {
+                    sh '''
+                        ${SONAR_HOME}/bin/sonar-scanner \
+                        -Dsonar.projectName=bloggingApp \
+                        -Dsonar.projectKey=bloggingApp \
+                        -Dsonar.java.binaries=target \
+                        
+                        
+                        echo "Using Sonar Scanner at ${SONAR_HOME}"
+                    '''
+                }
+            }
+        }
+    }
+}
+
+
+
+i want to run sonnarqube parrllely 
+ChatGPT said:
+In Jenkins Declarative Pipeline, if you want SonarQube analysis to run in parallel (e.g., alongside Maven build or other tasks), you can use the parallel block.
+
+Here’s how you can modify your pipeline:
+
+pipeline {
+    agent any
+
+    tools {
+        maven 'maven3'
+    }
+
+    environment {
+        SONAR_HOME = tool 'sonar-scanner'
+    }
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo 'Hello World'
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/Studytime098123/FullStack-Blogging-App.git'
+            }
+        }
+
+        stage('Build and Analysis') {
+            parallel {
+                stage('Maven Build') {
+                    steps {
+                        sh "mvn package"
+                    }
+                }
+
+                stage('SonarQube Analysis') {
+                    steps {
+                        echo 'Running SonarQube analysis...'
+                        withSonarQubeEnv('sonarqube') {
+                            sh '''
+                                ${SONAR_HOME}/bin/sonar-scanner \
+                                -Dsonar.projectName=bloggingApp \
+                                -Dsonar.projectKey=bloggingApp \
+                                -Dsonar.java.binaries=target
+
+                                echo "Using Sonar Scanner at ${SONAR_HOME}"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+🔑 Key Points:
+parallel block allows multiple stages to run simultaneously.
+
+I grouped Maven build and SonarQube under stage('Build and Analysis').
+
+If you want SonarQube to analyze the output of the build (target/), it’s usually better to run Maven first, then Sonar.
+
+But if your goal is to truly run them in parallel, you should ensure sonar-scanner doesn’t depend on the build output (or use a precompiled target).
+
+👉 Do you want SonarQube to analyze the Maven-built binaries (needs build first) or just run independently in parallel?
+
+
+
+
+No file chosenNo file chosen
+ChatGPT can make mistakes. Check important info. See Cookie Preferences.
