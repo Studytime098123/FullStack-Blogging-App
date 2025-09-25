@@ -1,0 +1,57 @@
+pipeline {
+    agent none   // important: disable global agent
+
+    tools {
+        maven 'maven3'
+    }
+
+    environment {
+        SONAR_HOME = tool 'sonar-scanner'
+    }
+
+    stages {
+        stage('Hello') {
+            agent any
+            steps {
+                echo 'Hello World'
+            }
+        }
+
+        stage('Checkout') {
+            agent { label 'git-agent' }   // choose an agent with git installed
+            steps {
+                git branch: 'main', url: 'https://github.com/Studytime098123/FullStack-Blogging-App.git'
+                stash includes: '**', name: 'source'
+            }
+        }
+
+        stage('Build and Analysis') {
+            parallel {
+                stage('Maven Build') {
+                    agent { label 'maven-agent' }
+                    steps {
+                        unstash 'source'
+                        sh "mvn package"
+                        stash includes: 'target/**', name: 'maven-artifacts'
+                    }
+                }
+
+                stage('SonarQube Analysis') {
+                    agent { label 'sonar-agent' }
+                    steps {
+                        unstash 'source'
+                        echo 'Running SonarQube analysis...'
+                        withSonarQubeEnv('sonarqube') {
+                            sh '''
+                                ${SONAR_HOME}/bin/sonar-scanner \
+                                -Dsonar.projectName=bloggingApp \
+                                -Dsonar.projectKey=bloggingApp \
+                                -Dsonar.java.binaries=target
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
