@@ -1,0 +1,24 @@
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /app
+
+# Copy pom.xml first and download dependencies (better caching)
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code and build
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# ---------- Runtime stage ----------
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# Add non-root user
+RUN addgroup -S app && adduser -S -G app app
+USER app:app
+
+# Copy jar from build stage (make sure it's the fat jar)
+COPY --from=builder /app/target/*SNAPSHOT.jar /app/my-app.jar
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "/app/my-app.jar"]
