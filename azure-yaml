@@ -1,0 +1,141 @@
+trigger:
+- main
+- dev
+
+pool:
+  vmImage: devops
+
+variables:
+  buildId: $(Build.BuildId)
+  imageName: blogging-app-$(Build.SourceBranchName)
+  acrLoginServer: blogging.azurecr.io
+  imageTag: $(Build.BuildNumber)
+  dockerImage: $(acrLoginServer)/$(imageName):$(imageTag)
+  kubernetesNamespace: default
+  reportRecipient: "baludev577@gmail.com,balavardhiraj816@gmail.com"
+  acrUsername: blogging
+  # acrPassword should be in your variable group as a secret
+
+stages:
+- stage: compile
+  displayName: 'Compile Stage'
+  jobs:
+  - job: BuildJob
+    displayName: 'Build Job'
+    pool:
+      name: devops
+      demands:
+        - agent.name -equals ec2-azure-agent
+    steps:
+    - script: |
+        echo "Running Maven build..."
+        mvn compile
+      displayName: 'Maven Compile Step'
+
+- stage: package
+  displayName: 'Maven Package'
+  jobs:
+  - job: PackageJob
+    displayName: 'Package Job'
+    pool:
+      name: devops
+      demands:
+        - agent.name -equals ec2-azure-agent
+    steps:
+    - script: |
+        echo "Running Maven package..."
+        mvn package
+      displayName: 'Maven Package Step'
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(System.DefaultWorkingDirectory)/target'
+        artifact: 'drop'
+        publishLocation: 'pipeline'
+      displayName: 'Publish JAR to Drop'
+
+
+- stage: sonnar
+  displayName: 'sonar verify'
+  jobs:
+  - job: sonnar
+    displayName: 'sonnar scanning'
+    pool:
+      name: devops
+      demands:
+        - agent.name -equals ec2-azure-agent
+    steps:
+    - script: |
+        echo "preparing for sonnar scanning"
+        
+      displayName: 'Maven Package Step'
+    
+    
+    - task: SonarQubePrepare@7
+      inputs:
+        SonarQube: 'sonar-qube-scan'
+        scannerMode: 'cli'
+        cliScannerVersion: '7.0.2.4839'
+        configMode: 'manual'
+        cliProjectKey: 'blogging-app'
+        cliProjectName: 'blogging-app'
+        cliSources: '.'
+        extraProperties: |
+          # Additional properties that will be passed to the scanner, 
+          # Put one key=value per line, example:
+          # sonar.exclusions=**/*.bin
+          sonar.java.binaries=.
+
+    - task: SonarQubeAnalyze@7
+      inputs:
+        jdkversion: 'JAVA_HOME_17_X64'
+    
+
+- stage: docker_build
+  displayName: 'Docker Build'
+  jobs:
+  - job: DockerImageJob
+    displayName: 'Docker Image Job'
+    pool:
+      name: devops
+      demands:
+        - agent.name -equals ec2-azure-agent
+    steps:
+    - script: |
+
+        echo "Current branch: $(Build.SourceBranchName)"
+        if [ "$BUILD_SOURCEBRANCHNAME" == "dev" || "$BUILD_SOURCEBRANCHNAME" == "qa" || "$BUILD_SOURCEBRANCHNAME" == feature* ]; then
+          echo "Running docker dev for dev branch..."
+          echo "Logging into ACR..."
+        echo $(acrPassword) | docker login $(acrLoginServer) -u $(acrUsername) --password-stdin
+        echo "Building Docker image..."
+        docker build -t $(dockerImage) .
+        docker push $(dockerImage)
+        docker rmi $(dockerImage)
+
+        elif [ "$(Build.SourceBranchName)" = "main" ]; then
+          echo "Running docker prod for main branch..."
+          
+        
+
+        echo "Logging into ACR..."
+        echo $(acrPassword) | docker login $(acrLoginServer) -u $(acrUsername) --password-stdin
+        echo "Building Docker image..."
+        docker build -t $(dockerImage) .
+        
+        echo "Pushing Docker image..."
+        docker push $(dockerImage)
+        docker rmi $(dockerImage)
+
+        else
+          echo "Branch $(Build.SourceBranchName) not supported for build."
+          exit 1
+        fi
+
+        
+
+      displayName: 'Docker Login, Build, and Push'
+
+      
+
+    
